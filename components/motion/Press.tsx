@@ -11,6 +11,13 @@ import { useCallback, useMemo, useRef } from "react";
 
 const DRIVER = { useNativeDriver: true } as const;
 
+/**
+ * Nilai konstan 1. Tidak pernah diubah, jadi aman dipakai bersama oleh
+ * semua tombol — tanpa ini tiap render membuat `Animated.Value` dan graf
+ * animasi baru untuk setiap tombol yang sedang dirender ulang.
+ */
+const ONE = new Animated.Value(1);
+
 type HoverHandlers = {
   onHoverIn?: () => void;
   onHoverOut?: () => void;
@@ -66,12 +73,13 @@ export function Press({
   const pressed = useRef(new Animated.Value(0)).current;
   const { hovered, handlers } = useHover();
 
-  const scale = Animated.add(
-    Animated.add(
-      new Animated.Value(1),
-      Animated.multiply(hovered, hoverScale - 1),
-    ),
-    Animated.multiply(pressed, pressScale - 1),
+  const scale = useMemo(
+    () =>
+      Animated.add(
+        Animated.add(ONE, Animated.multiply(hovered, hoverScale - 1)),
+        Animated.multiply(pressed, pressScale - 1),
+      ),
+    [hovered, pressed, hoverScale, pressScale],
   );
 
   return (

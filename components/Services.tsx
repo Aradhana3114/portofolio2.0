@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Animated, Text, View } from "react-native";
 import { services } from "@/data/content";
 import { Reveal, RevealItem } from "./motion/Reveal";
@@ -15,6 +15,9 @@ const TONE_HEX: Record<string, string> = {
   "bg-cream": "#f1ead8",
 };
 
+/** Opacity dasar baris yang tidak pernah diubah — dipakai bersama supaya *  graf animasi tidak dibuat ulang tiap render baris. */
+const BASE_FADE = new Animated.Value(0.8);
+
 function Row({
   s,
   active,
@@ -27,23 +30,28 @@ function Row({
   wide: boolean;
 }) {
   const activeT = useFadeTo(active, 200);
-  const fade = {
-    opacity: Animated.add(
-      new Animated.Value(0.8),
-      Animated.multiply(activeT, 0.2),
-    ),
-  };
   const plusT = useFadeTo(active, 220);
-  const plus = {
-    transform: [
-      {
-        rotate: plusT.interpolate({
-          inputRange: [0, 1],
-          outputRange: ["0deg", "45deg"],
-        }),
-      },
-    ],
-  };
+
+  const fade = useMemo(
+    () => ({
+      opacity: Animated.add(BASE_FADE, Animated.multiply(activeT, 0.2)),
+    }),
+    [activeT],
+  );
+
+  const plus = useMemo(
+    () => ({
+      transform: [
+        {
+          rotate: plusT.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["0deg", "45deg"],
+          }),
+        },
+      ],
+    }),
+    [plusT],
+  );
 
   return (
 <Animated.View style={fade}>
