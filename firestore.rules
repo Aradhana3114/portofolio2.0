@@ -1,0 +1,119 @@
+rules_version = '2';
+
+// Firestore Security Rules untuk guestbook.
+// Lokasi standar Firebase — file ini yang dibaca `firebase deploy`.
+//
+// Padanan langsung dari RLS di Supabase. Ini SATU-SATUNYA hal yang
+// menentukan apakah aman atau tidak. Tombol di UI bukan pengaman:
+// anybody bisa skip UI dan mengirim request langsung dari DevTools.
+//
+// Deploy: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Satu-satunya akun yang boleh menghapus / membalas.
+    //
+    // Kenapa email, bukan cuma `request.auth != null`: provider
+    // Email/Password aktif, artinya siapa pun bisa memanggil
+    // accounts:signUp lewat API dan membuat akunnya sendiri. Kalau aturannya
+    // hanya "sudah login", orang itu langsung jadi admin.
+    //
+    // Catatan: Security Rules TIDAK punya `lower()` maupun `toLowerCase()`.
+    // Yang tersedia untuk string hanya `size()`, `matches()`, `split()`.
+    // Perbandingan dilakukan langsung — Firebase Auth menormalkan email ke
+    // huruf kecil saat akun dibuat, jadi ini cukup.
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.token.email == 'admin@gmail.com'
+            || request.auth.token.email == 'dhana7711@gmail.com');
+    }
+
+    match /guestbook/{entryId} {
+
+      // BACA — boleh untuk semua orang, termasuk yang belum login.
+      // Guestbook memang ditujukan untuk dibaca siapa pun.
+      allow read: if true;
+
+      // TULIS — boleh untuk semua orang, tapi isinya dibatasi di server.
+      // Balasan tidak boleh diset saat membuat, hanya admin yang boleh.
+      allow create: if request.resource.data.keys().hasOnly(['name', 'text', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 40
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() >= 1
+                    && request.resource.data.text.size() <= 280
+                    && request.resource.data.createdAt is int;
+
+      // UPDATE — hanya admin, dan hanya boleh menyentuh `reply` / `repliedAt`.
+      //
+      // PENTING: setiap field diakses lewat `get(nama, null)`, bukan
+      // `data.nama`. Mengakses field yang belum pernah ada di dokumen akan
+      // melempar error, dan error itu membuat SELURUH rule bernilai false.
+      // Message yang belum pernah dibalas tidak punya field `repliedAt`,
+      // jadi tanpa `get()` balasan pertama pun tidak akan bisa disimpan.
+      //
+      // Isi pesan asli tidak boleh berubah — kalau `name` atau `text` diubah,
+      // admin bisa memalsukan siapa yang menulis.
+      allow update: if isAdmin()
+                    && request.resource.data.keys().hasOnly(['name', 'text', 'createdAt', 'reply', 'repliedAt'])
+                    && request.resource.data.get('name', null) == resource.data.get('name', null)
+                    && request.resource.data.get('text', null) == resource.data.get('text', null)
+                    && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+                    && (request.resource.data.get('reply', null) == null
+                        || (request.resource.data.get('reply', null) is string
+                            && request.resource.data.get('reply', null).size() <= 600))
+                    && (request.resource.data.get('repliedAt', null) == null
+                        || request.resource.data.get('repliedAt', null) is int);
+
+      // DELETE — hanya admin.
+      allow delete: if isAdmin();
+    }
+
+    // Pesan dari form Kontak. Beda dengan guestbook: isi pesan TIDAK
+    // pernah dibaca publik, karena tiap dokumen menyimpan email pribadi
+    // pengunjung. Baca dan hapus hanya admin; hanya `create` yang publik.
+    match /contact/{msgId} {
+
+      // BACA — hanya admin.
+      allow read: if isAdmin();
+
+      // TULIS — boleh untuk semua orang (form Kontak ada di halaman
+      // publik), tapi isinya dibatasi di server.
+      //
+      // Regex email sengaja hanya `^.+@.+$` tanpa backslash: Security
+      // Rules memakai RE2 dan escaping di dalam string literal rawan
+      // berbeda-beda perilaku. Validasi format yang ketat dilakukan di
+      // klien sebelum mengirim; aturan ini hanya menangkap kasar.
+      allow create: if request.resource.data.keys()
+                        .hasOnly(['name', 'email', 'subject', 'text', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 60
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() >= 3
+                    && request.resource.data.email.size() <= 120
+                    && request.resource.data.email.matches('^.+@.+$')
+                    && request.resource.data.subject is string
+                    && request.resource.data.subject.size() >= 1
+                    && request.resource.data.subject.size() <= 80
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() >= 1
+                    && request.resource.data.text.size() <= 1200
+                    && request.resource.data.createdAt is int;
+
+      // UPDATE — tidak ada. Form Kontak tidak mengedit, dan tidak ada
+      // field balasan seperti di guestbook.
+      allow update: if false;
+
+      // DELETE — hanya admin.
+      allow delete: if isAdmin();
+    }
+
+    // Apapun yang bukan guestbook / contact ditutup.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Aradhana Dev",
+    "slug": "portfolio-aradhana",
+    "scheme": "aradhana",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#f6f2ff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "id.aradhana.portfolio"
+    },
+    "android": {
+      "package": "id.aradhana.portfolio",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
+  }
+}

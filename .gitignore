@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
+*.orig.*
+.env*.local
+# Kredensial Supabase. Jangan pernah di-commit: EXPO_PUBLIC_* di-inline ke
+# bundle, jadi .env yang ter-commit berarti anon key ikut ter-push.
+.env
+.env.*
+!.env.example
