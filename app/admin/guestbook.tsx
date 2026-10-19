@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -35,6 +35,95 @@ const CRUMB = "Guestbook / admin";
 const TITLE = "Kelola\npesan";
 const TITLE_LOGIN = "Kelola pesan";
 const LEAD = "Balas, ubah, atau hapus pesan yang masuk dari halaman Guestbook.";
+
+/**
+ * Satu baris pesan di panel admin.
+ *
+ * Di-memo supaya mengetik draf balasan pada satu pesan tidak merender ulang
+ * seluruh daftar — daftar bisa berisi hingga 200 pesan dan tiap baris punya
+ * TextInput sendiri-sendiri.
+ */
+const MessageRow = memo(function MessageRow({
+  entry,
+  no,
+  draft,
+  replying,
+  deleting,
+  onDraftChange,
+  onSaveReply,
+  onRemove,
+}: {
+  entry: GuestbookEntry;
+  no: number;
+  draft: string;
+  replying: boolean;
+  deleting: boolean;
+  onDraftChange: (id: string, value: string) => void;
+  onSaveReply: (id: string, value: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <NeoBox shadow={6} className="bg-paper p-5">
+      <View className="flex-row flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
+        <Text
+          className="flex-1 font-display uppercase text-ink"
+          style={{ fontSize: 19, lineHeight: 21, letterSpacing: -0.4 }}
+          numberOfLines={1}
+        >
+          {entry.name}
+        </Text>
+        <Chip>
+          #{String(no).padStart(2, "0")} · {fmtDate(entry.createdAt)}
+        </Chip>
+      </View>
+
+      <Text className="mt-3 font-sans text-ink" style={{ fontSize: 16, lineHeight: 25 }}>
+        {entry.text}
+      </Text>
+
+      {entry.reply ? (
+        <NeoBox shadow={3} className="mt-4 bg-lime p-4">
+          <Mono>BALASAN</Mono>
+          <Text className="mt-2 font-sans text-ink" style={{ fontSize: 15, lineHeight: 22 }}>
+            {entry.reply}
+          </Text>
+        </NeoBox>
+      ) : null}
+
+      <TextInput
+        value={draft}
+        onChangeText={(v) => onDraftChange(entry.id, v)}
+        placeholder={entry.reply ? "Ubah balasan..." : "Balas pesan ini..."}
+        placeholderTextColor="#19171766"
+        multiline
+        maxLength={GUESTBOOK_MAX_REPLY}
+        className="mt-4 border-2 border-ink bg-cream px-4 py-3 font-sans text-base text-ink"
+        style={{ minHeight: 88, textAlignVertical: "top" }}
+      />
+
+      <View className="mt-2 flex-row flex-wrap items-center gap-3">
+        <Mono className="text-ink/45">
+          {draft.length}/{GUESTBOOK_MAX_REPLY}
+        </Mono>
+        <View className="flex-1" />
+        <NeoButton
+          onPress={() => onSaveReply(entry.id, draft)}
+          tone={replying ? "ink" : "lime"}
+          disabled={replying}
+        >
+          {replying ? "Menyimpan" : entry.reply ? "Ubah balasan" : "Balas"}
+        </NeoButton>
+        <NeoButton
+          onPress={() => onRemove(entry.id)}
+          tone={deleting ? "ink" : "ground"}
+          disabled={deleting}
+        >
+          {deleting ? "Menghapus" : "Hapus"}
+        </NeoButton>
+      </View>
+    </NeoBox>
+  );
+});
 
 export default function AdminGuestbook() {
   const [user, setUser] = useState<{ email: string | null } | null>(null);
@@ -112,7 +201,7 @@ export default function AdminGuestbook() {
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = useCallback(async (id: string) => {
     setDeletingId(id);
     setLoadError(null);
     try {
@@ -125,24 +214,33 @@ export default function AdminGuestbook() {
     } finally {
       setDeletingId(null);
     }
-  };
+  }, []);
 
-  const saveReply = async (id: string) => {
+  /**
+   * Nilai draf dikirim dari barisnya, bukan diambil dari `drafts` di sini.
+   * Kalau tidak, fungsi ini berubah tiap ketikan dan semua baris ikut
+   * render ulang karena props callback-nya berubah.
+   */
+  const saveReply = useCallback(async (id: string, value: string) => {
     setReplyingId(id);
     setLoadError(null);
-    const value = (drafts[id] ?? "").trim();
+    const next = value.trim();
     try {
-      await replyGuestbook(id, value);
+      await replyGuestbook(id, next);
       setRows((prev) => prev.map((r) => (r.id === id
-        ? { ...r, reply: value || null, repliedAt: value ? Date.now() : null }
+        ? { ...r, reply: next || null, repliedAt: next ? Date.now() : null }
         : r)));
-      setDrafts((prev) => ({ ...prev, [id]: value }));
+      setDrafts((prev) => ({ ...prev, [id]: next }));
     } catch (e) {
       setLoadError(friendlyRulesError(e));
     } finally {
       setReplyingId(null);
     }
-  };
+  }, []);
+
+  const onDraftChange = useCallback((id: string, value: string) => {
+    setDrafts((prev) => ({ ...prev, [id]: value }));
+  }, []);
 
   if (!isFirebaseConfigured) {
     return (
@@ -253,65 +351,17 @@ export default function AdminGuestbook() {
 
       <View className="mt-6 gap-6">
         {rows.map((r, n) => (
-          <NeoBox key={r.id} shadow={6} className="bg-paper p-5">
-            <View className="flex-row flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
-              <Text
-                className="flex-1 font-display uppercase text-ink"
-                style={{ fontSize: 19, lineHeight: 21, letterSpacing: -0.4 }}
-                numberOfLines={1}
-              >
-                {r.name}
-              </Text>
-              <Chip>
-                #{String(rows.length - n).padStart(2, "0")} · {fmtDate(r.createdAt)}
-              </Chip>
-            </View>
-
-            <Text className="mt-3 font-sans text-ink" style={{ fontSize: 16, lineHeight: 25 }}>
-              {r.text}
-            </Text>
-
-            {r.reply ? (
-              <NeoBox shadow={3} className="mt-4 bg-lime p-4">
-                <Mono>BALASAN</Mono>
-                <Text className="mt-2 font-sans text-ink" style={{ fontSize: 15, lineHeight: 22 }}>
-                  {r.reply}
-                </Text>
-              </NeoBox>
-            ) : null}
-
-            <TextInput
-              value={drafts[r.id] ?? (r.reply ?? "")}
-              onChangeText={(v) => setDrafts((d) => ({ ...d, [r.id]: v }))}
-              placeholder={r.reply ? "Ubah balasan..." : "Balas pesan ini..."}
-              placeholderTextColor="#19171766"
-              multiline
-              maxLength={GUESTBOOK_MAX_REPLY}
-              className="mt-4 border-2 border-ink bg-cream px-4 py-3 font-sans text-base text-ink"
-              style={{ minHeight: 88, textAlignVertical: "top" }}
-            />
-
-            <View className="mt-2 flex-row flex-wrap items-center gap-3">
-              <Mono className="text-ink/45">
-                {(drafts[r.id] ?? r.reply ?? "").length}/{GUESTBOOK_MAX_REPLY}
-              </Mono>
-              <View className="flex-1" />
-              <NeoButton
-                onPress={() => saveReply(r.id)}
-                tone={replyingId === r.id ? "ink" : "lime"}
-                disabled={replyingId === r.id}
-              >
-                {replyingId === r.id ? "Menyimpan" : r.reply ? "Ubah balasan" : "Balas"}
-              </NeoButton>
-              <NeoButton
-                onPress={() => remove(r.id)}
-                tone={deletingId === r.id ? "ink" : "ground"}
-                disabled={deletingId === r.id}
-              >
-                {deletingId === r.id ? "Menghapus" : "Hapus"}
-              </NeoButton>
-            </View>
-          </NeoBox>
+          <MessageRow
+            key={r.id}
+            entry={r}
+            no={rows.length - n}
+            draft={drafts[r.id] ?? r.reply ?? ""}
+            replying={replyingId === r.id}
+            deleting={deletingId === r.id}
+            onDraftChange={onDraftChange}
+            onSaveReply={saveReply}
+            onRemove={remove}
+          />
         ))}
       </View>
 
