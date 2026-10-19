@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Animated, Text, TextInput, View } from "react-native";
 import {
   GUESTBOOK_MAX_MESSAGE,
@@ -18,6 +18,58 @@ type Msg = GuestbookEntry;
 
 const input =
   "rounded-card border-2 border-ink bg-paper px-5 py-4 font-sans text-base text-ink";
+
+/**
+ * Satu kartu pesan.
+ *
+ * Di-memo: daftar bisa berisi puluhan kartu, dan tiap ketikan di formulir
+ * mengubah state nama/pesan. Tanpa memo seluruh daftar ikut render ulang
+ * padahal isinya tidak berubah sama sekali.
+ */
+const GuestbookItem = memo(function GuestbookItem({
+  m,
+  index,
+  no,
+  offset,
+}: {
+  m: Msg;
+  index: number;
+  no: number;
+  offset: boolean;
+}) {
+  return (
+    <Reveal delay={index}>
+      <View
+        className="rounded-card bg-ink p-5"
+        style={offset ? { marginLeft: 48 } : undefined}
+      >
+        <View className="flex-row items-center justify-between">
+          <Text className="font-display uppercase text-lime" style={{ fontSize: 20, lineHeight: 20 }}>
+            {m.name}
+          </Text>
+          <Mono color="text-paper">#{String(no).padStart(2, "0")}</Mono>
+        </View>
+        <Text
+          className="mt-2 font-sans text-paper"
+          style={{ fontSize: 16, lineHeight: 24 }}
+        >
+          {m.text}
+        </Text>
+        {m.reply ? (
+          <View className="mt-4 rounded-card bg-paper/10 p-3">
+            <Mono color="text-lime">Balasan</Mono>
+            <Text
+              className="mt-1 font-sans text-paper"
+              style={{ fontSize: 15, lineHeight: 22 }}
+            >
+              {m.reply}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </Reveal>
+  );
+});
 
 export default function Guestbook() {
   const anchor = useSectionAnchor("guestbook");
@@ -165,42 +217,13 @@ export default function Guestbook() {
                 </Reveal>
               ) : (
                 list.map((m, n) => (
-                  <Reveal key={n} delay={n}>
-                    <View
-                      className={`rounded-card bg-ink p-5`}
-                      style={
-                        wide && n % 2 === 1
-                          ? { marginLeft: 48 }
-                          : undefined
-                      }
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <Text className="font-display uppercase text-lime" style={{ fontSize: 20, lineHeight: 20 }}>
-                          {m.name}
-                        </Text>
-                        <Mono color="text-paper">
-                          #{String(list.length - n).padStart(2, "0")}
-                        </Mono>
-                      </View>
-                      <Text
-                        className="mt-2 font-sans text-paper"
-                        style={{ fontSize: 16, lineHeight: 24 }}
-                      >
-                        {m.text}
-                      </Text>
-                      {m.reply ? (
-                        <View className="mt-4 rounded-card bg-paper/10 p-3">
-                          <Mono color="text-lime">Balasan</Mono>
-                          <Text
-                            className="mt-1 font-sans text-paper"
-                            style={{ fontSize: 15, lineHeight: 22 }}
-                          >
-                            {m.reply}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </Reveal>
+                  <GuestbookItem
+                    key={m.id}
+                    m={m}
+                    index={n}
+                    no={list.length - n}
+                    offset={wide && n % 2 === 1}
+                  />
                 ))
               )}
             </View>
