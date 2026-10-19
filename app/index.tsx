@@ -1,4 +1,4 @@
-import { Animated, ScrollView } from "react-native";
+import { Animated, Platform, ScrollView } from "react-native";
 import { useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -30,11 +30,19 @@ export default function Home() {
   // jalan di JS thread) tanpa menyentuh event native yang sudah ada.
   const splashY = useRef(new Animated.Value(0)).current;
 
+  // Di web, ScrollExpand memakai `ScrollExpandDom` yang membaca posisi scroll
+  // sendiri langsung dari DOM; `splashY` tidak dikonsumsi siapa pun di sana.
+  // Menyimpan nilai tiap event scroll tetap memicu pekerjaan JS percuma,
+  // jadi listener hanya dipasang di native.
+  const isWeb = Platform.OS === "web";
+
   const onScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
       useNativeDriver: true,
-      listener: (e: any) => splashY.setValue(e.nativeEvent.contentOffset.y),
+      listener: isWeb
+        ? undefined
+        : (e: any) => splashY.setValue(e.nativeEvent.contentOffset.y),
     },
   );
 

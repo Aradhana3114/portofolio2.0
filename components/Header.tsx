@@ -4,7 +4,7 @@ import type { StyleProp, ViewStyle } from "react-native";
 import { nav, profile, socials } from "@/data/content";
 import { useSectionScroll } from "./SectionScroll";
 import { Press } from "./motion/Press";
-import { useWide } from "./motion/Motion";
+import { useMotion, useWide } from "./motion/Motion";
 import { Display } from "./ui";
 
 const DRIVER = { useNativeDriver: true } as const;
@@ -59,6 +59,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const { scrollTo } = useSectionScroll();
   const wide = useWide();
+  const { reduceMotion } = useMotion();
   const isWeb = Platform.OS === "web";
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -66,7 +67,7 @@ export default function Header() {
     setOpen(false);
     Animated.timing(progress, {
       toValue: 0,
-      duration: 180,
+      duration: reduceMotion ? 0 : 180,
       ...DRIVER,
     }).start();
     requestAnimationFrame(() => scrollTo(id));
@@ -77,7 +78,7 @@ export default function Header() {
     setOpen(next);
     Animated.timing(progress, {
       toValue: next ? 1 : 0,
-      duration: next ? 240 : 180,
+      duration: reduceMotion ? 0 : next ? 240 : 180,
       ...DRIVER,
     }).start();
   };
@@ -90,10 +91,14 @@ export default function Header() {
   // konten, dan muncul lagi saat scroll ke atas. Web-only: di native header
   // memakai position absolute sehingga sudah ikut ter-scroll.
   const hidden = useRef(new Animated.Value(0)).current;
+  // Status yang sedang dituju (false = terlihat, true = tersembunyi). Dipakai
+  // supaya animasi hanya dimulai saat status benar-benar berubah.
+  const hiddenState = useRef(false);
 
   useEffect(() => {
     if (!isWeb) return;
     let last: number | null = null;
+    let shown = hiddenState.current;
 
     const onScroll = (e: Event) => {
       if (open) return;
@@ -106,19 +111,25 @@ export default function Header() {
       const dy = y - last;
       const show = y < 48 || dy < -4;
       const hide = dy > 6 && y > 96;
-      if (show || hide) {
+      // `null` berarti event ini tidak memutuhkan perubahan apa pun. Tanpa
+      // penyaringan ini setiap frame scroll ke bawah memulai `Animated.timing`
+      // baru, jadi animasi restart dari nol terus-menerus saat scroll cepat.
+      const next = show ? false : hide ? true : null;
+      if (next !== null && next !== shown) {
+        shown = next;
+        hiddenState.current = next;
         Animated.timing(hidden, {
-          toValue: show ? 0 : 1,
-          duration: 180,
+          toValue: next ? 1 : 0,
+          duration: reduceMotion ? 0 : 180,
           ...DRIVER,
         }).start();
       }
       last = y;
     };
 
-    document.addEventListener("scroll", onScroll, true);
-    return () => document.removeEventListener("scroll", onScroll, true);
-  }, [hidden, open, isWeb]);
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true } as never);
+  }, [hidden, open, isWeb, reduceMotion]);
 
   const chrome = {
     opacity: hidden.interpolate({
