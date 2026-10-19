@@ -193,7 +193,7 @@ export function Lanyard({
     cardDeg.value = 0;
   }, [w, anchorX, anchorY, segLen, introDrop, ax, ay, x, px, y, py, cardDeg]);
 
-  useFrameCallback(
+  const frame = useFrameCallback(
     (info) => {
       "worklet";
       const dt = Math.min(info.timeSincePreviousFrame ?? 16.667, 32) / 16.667;
@@ -274,7 +274,18 @@ export function Lanyard({
         (Math.atan2(ys[2] - ys[1], xs[2] - xs[1]) * 180) / Math.PI - 90;
       cardDeg.value += (Math.min(Math.max(target, -70), 70) - cardDeg.value) * 0.35;
     },
+    false,
   );
+
+  // Callback fisika didaftarkan dengan `autostart: false` lalu diaktifkan
+  // setelah container terukur. Sebelum `w` diketahui, view-nya sendiri belum
+  // dirender (`w > 0` di bawah) sementara tiap frame tetap menjalankan
+  // simulasi terhadap posisi yang semuanya nol — hasilnya dibuang.
+  // Catatan: tidak dipause saat di luar layar karena tidak ada sinyal
+  // visibilitas murah di native tanpa merombak struktur bagian ini.
+  useEffect(() => {
+    if (w > 0) frame.setActive(true);
+  }, [w, frame]);
 
   const segStyles = [
     useSegment(0, ax, ay, x, y, strapW),
