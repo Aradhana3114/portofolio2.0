@@ -1,5 +1,6 @@
 import { Linking, Text, View } from "react-native";
 import { nav, profile, socials } from "@/data/content";
+import { openMailto } from "@/lib/openMailto";
 import { Reveal } from "./motion/Reveal";
 import { Press } from "./motion/Press";
 import { useWide } from "./motion/Motion";
@@ -63,7 +64,7 @@ export default function Footer() {
               >
                 {profile.name} — {profile.major}, {profile.school}.
               </Text>
-              <Press onPress={() => Linking.openURL(`mailto:${profile.email}`)} className="mt-4 self-start">
+              <Press onPress={() => openMailto(profile.email)} className="mt-4 self-start">
                 <View className="rounded-pill bg-paper px-4 py-2">
                   <Text className="font-sans text-sm text-ink">{profile.email}</Text>
                 </View>
