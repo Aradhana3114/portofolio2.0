@@ -3,10 +3,10 @@ import { Linking, Platform } from "react-native";
 /**
  * Buka compose email ke `to`.
  *
- * Di web: langsung ke Gmail compose di tab yang sama — bukan `mailto:`
- * yang memicu dialog "Select an app to open this 'mailto' link" milik
- * Windows, dan bukan `window.open` yang bisa diblokir tanpa pesan
- * (popup blocker, in-app browser). Navigasi biasa tidak pernah diblokir.
+ * Di web: Gmail compose di TAB BARU lewat `window.open`. Panggilan ini selalu
+ * berada tepat di dalam handler klik (user gesture), jadi popup blocker
+ * membiarkannya; `noopener` memutus referensi opener. Skema https juga tidak
+ * memicu dialog "Select an app to open this 'mailto' link" milik Windows.
  *
  * Native (Android/iOS): tetap memakai mail client bawaan lewat `mailto:` —
  * di sana tidak ada dialog pemilihan aplikasi seperti di Windows dan
@@ -23,7 +23,11 @@ export function composeEmail(
     query.set("to", to);
     if (opts?.subject) query.set("su", opts.subject);
     if (opts?.body) query.set("body", opts.body);
-    window.location.href = `https://mail.google.com/mail/?${query.toString()}`;
+    window.open(
+      `https://mail.google.com/mail/?${query.toString()}`,
+      "_blank",
+      "noopener",
+    );
     return;
   }
 
