@@ -4,7 +4,7 @@ import { profile, socials, subjects } from "@/data/content";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { addContact } from "@/lib/contact";
 import { friendlyRulesError } from "@/lib/errors";
-import { openMailto } from "@/lib/openMailto";
+import { composeEmail } from "@/lib/composeEmail";
 import { Reveal } from "./motion/Reveal";
 import { Press } from "./motion/Press";
 import { useSpin } from "./motion/Entrance";
@@ -65,7 +65,7 @@ export default function Contact() {
     // Firebase belum dikonfigurasi: turunkan ke mailto supaya form tetap
     // berguna di lingkungan tanpa backend.
     if (!isFirebaseConfigured) {
-      openMailto(profile.email, {
+      composeEmail(profile.email, {
         subject,
         body: `${msg}\n\nDari: ${name} (${email})`,
       });
@@ -134,7 +134,7 @@ export default function Contact() {
                 >
                   {profile.email}
                 </Text>
-                <Press onPress={() => openMailto(profile.email)} className="mt-4 self-start">
+                <Press onPress={() => composeEmail(profile.email)} className="mt-4 self-start">
                   <View className="flex-row items-center gap-2 rounded-pill bg-lime px-4 py-2">
                     <Text className="font-sans text-sm uppercase text-ink">
                       Tulis email
