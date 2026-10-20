@@ -1,6 +1,5 @@
 import { createElement, type ReactNode } from "react";
 import { ScrollViewStyleReset } from "expo-router/html";
-import { scrollExpandCss } from "@/components/scrollExpandCss";
 
 /**
  * Shell dokumen untuk web (dev maupun hasil `expo export`).
@@ -11,9 +10,9 @@ import { scrollExpandCss } from "@/components/scrollExpandCss";
  * yang disajikan sebelum satu baris JS pun dievaluasi.
  *
  * Kenapa ini penting: ada jendela (di dev bisa beberapa detik) ketika browser
- * sudah menampilkan HTML tapi JS belum jalan. Apa pun yang disuntik lewat
- * `useEffect` atau `useFonts` belum ada di jendela itu. Judul tab, meta, dan
- * CSS intro ScrollExpand harus sudah ada di HTML.
+ * sudah menampilkan HTML tapi JS belum jalan. Apapun yang disuntik lewat
+ * `useEffect` atau `useFonts` belum ada di jendela itu. Judul tab dan meta
+ * harus sudah ada di HTML.
  *
  * Pakai `createElement`, bukan JSX `<html>`: `tsconfig` memakai
  * `jsxImportSource: "nativewind"`, jadi elemen HTML mentah tidak punya tipe.
@@ -67,12 +66,6 @@ export default function Root({ children }: { children: ReactNode }) {
       createElement("style", {
         id: "document-css",
         dangerouslySetInnerHTML: { __html: documentCss },
-      }),
-      // Id yang sama dicek `ensureScrollExpandStyle()`, jadi CSS ini tidak
-      // akan pernah terpasang dua kali.
-      createElement("style", {
-        id: "scroll-expand-css",
-        dangerouslySetInnerHTML: { __html: scrollExpandCss },
       }),
     ),
     createElement("body", null, children),

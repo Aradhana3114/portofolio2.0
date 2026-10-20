@@ -69,9 +69,6 @@ h1 `104/46`, h2 `82/38`, h3 `60/30`, h4 `46/26`, h5 `30/22`, h6 `24/18`.
     app/index.tsx            halaman utama: ScrollView + navigasi section
     app/project/[slug].tsx   halaman case study (route internal)
     components/
-      ScrollExpand.tsx        dispatcher intro: DOM (web) / RN (native)
-      ScrollExpandDom.tsx     implementasi DOM asli React Bits (web)
-      ScrollExpandNative.tsx  port React Native (Android/iOS)
       Header.tsx             pill nav mengambang + overlay fullscreen
       Hero.tsx               headline raksasa, blob organik, marquee
       Words.tsx              statement band lime (paling atas) + ticker
@@ -138,75 +135,3 @@ h1 `104/46`, h2 `82/38`, h3 `60/30`, h4 `46/26`, h5 `30/22`, h6 `24/18`.
   "Kunjungi Situs" → situs asli, "Baca Case Study" → `/project/<slug>`.
   Tautan `caseStudy` di `data/content.ts` tetap dipakai sebagai tombol
   sekunder "Dokumentasi Asli" di dalam halaman case study.
-
-## Intro ScrollExpand
-
-Komponen `ScrollExpand` dari React Bits, dipakai sebagai intro paling atas
-halaman sebelum `Hero`.
-
-Ada **dua implementasi**, dipilih lewat `Platform.OS`:
-
-| File | Dipakai di | Isi |
-|---|---|---|
-| `ScrollExpandDom.tsx` | web | Komponen DOM asli React Bits, nyaris verbatim |
-| `ScrollExpandNative.tsx` | Android/iOS | Port ke primitive React Native |
-| `ScrollExpand.tsx` | keduanya | Dispatcher |
-
-### Kenapa harus dua
-
-Efek ScrollExpand aslinya hampir seluruhnya dikerjakan browser:
-
-- `position: sticky` mengunci frame → compositor, **tanpa JS sama sekali**
-- `clip-path: inset(...)` membuka frame → **tanpa reflow**
-- `transform: scale()` untuk media → GPU
-
-React Native tidak punya `clipPath`. Satu-satunya cara meniru kesan itu di RN
-adalah menganimasikan `width`, `height`, `left`, `top`, dan `borderRadius` —
-dan semuanya itu **layout properties**, jadi tiap frame memicu reflow.
-Akibatnya port RN secara struktural tidak akan pernah sehalus versi DOM.
-
-Karena `aradhana.my.id` memakai web export, versi DOM yang dipakai di sana, dan
-port RN tetap dipakai di native. Pengukuran saat scroll lewat splash (Chrome
-headless `--disable-gpu`, software rendering, 4 run): median **16.8–17.0
-ms/frame** (~60fps), p95 21.8–22.5ms, 9–15% frame di atas 20ms. Di perangkat
-nyata dengan GPU angka ini seharusnya lebih baik, tapi angka headless ini
-sudah cuma sedikit di bawah 60fps — tidak ada frame drop besar.
-
-### Yang perlu disesuaikan dari aslinya
-
-- **Sumber scroll.** Halaman ini scroll di dalam satu `Animated.ScrollView`,
-  bukan `window`, jadi `useWindowScroll` selalu membaca `0`. Versi DOM mencari
-  scroll parent terdekat lalu mengubah `scrollTop`-nya jadi progress;
-  `position: sticky` tetap dipakai apa adanya dan sudah terbukti jalan di
-  dalam ScrollView react-native-web.
-- **CSS.** Tidak ada pipeline CSS per komponen (`global.css` isinya cuma
-  directive Tailwind untuk NativeWind), jadi CSS React Bits disuntik sebagai
-  satu `<style>` ke `document.head` dari `useEffect`.
-- **`prefers-reduced-motion`** memakai `reduceMotion` dari `MotionProvider`.
-- **Default responsif.** `42%/58%` milik React Bits mengasumsikan stage
-  desktop; di layar 390px frame diam cuma ~164px. Mobile memakai
-  `74%/52%`. Berlaku untuk kedua implementasi.
-- **`mediaType`/`poster`** tidak ikut: butuh `expo-video` yang belum terpasang.
-  `src` tetap didukung; tanpa `src` memakai gradien brand + Asterisk lime
-  sebagai placeholder (repo ini belum punya aset gambar).
-
-### Dua jebakan yang sudah pernah menggigit
-
-1. **Pin tidak boleh di-lerp — hanya ekspansinya.** Di versi RN, kalau `pinY`
-   ikut memakai nilai hasil smoothing, saat scroll turun nilai `cur` selalu
-   tertinggal dari `raw`, sehingga `viewport-y = -raw + cur` menjadi negatif:
-   frame terlihat **naik ke atas** keluar layar lalu menyusul. Di React Bits
-   asli ini mustahil terjadi karena `position: sticky` ditangani browser,
-   terpisah dari lerp yang cuma menggerakkan `clip-path`. Karena itu versi RN
-   memakai dua nilai: `expansion` (di-lerp) dan `pinY` (scroll mentah).
-2. **`useStageSize()`** (versi RN) memakai pola `useWide()`: di web render
-   pertama mengembalikan `0`, baru viewport asli setelah `useEffect`. Kalau
-   tidak, geometry yang di-interpolate akan berbeda antara server dan client
-   dan memicu React error #418.
-3. **`removeEventListener` harus ikut `capture`.** Asli React Bits memasang
-   listener `scroll` dengan `{ capture: true }` tapi melepasnya tanpa
-   `capture` — jadi tidak pernah benar-benar dilepas. Versi DOM di sini
-   sudah diperbaiki.
-
-#   a r a d h a n a - p o r t o f o l i o  
- 

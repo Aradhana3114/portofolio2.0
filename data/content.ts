@@ -26,15 +26,6 @@ export const nav = [
 
 export const marquee = ["FULL STACK DEVELOPER", "UI/UX", "WEB DEVELOPMENT"];
 
-/** Copy untuk intro ScrollExpand di paling atas halaman. */
-export const splash = {
-  title: "PORTOFOLIO",
-  hint: "SCROLL",
-  body: "Setiap pixel, di setiap layar.",
-  /** Gradien placeholder; dipakai sampai ada `src` gambar asli. */
-  gradient: ["#c3b5f9", "#3600a9", "#ff2f11"] as const,
-};
-
 export const techStack = [
   { group: "Frontend", items: [["Next.js", "Menengah"], ["React", "Menengah"], ["TypeScript", "Menengah"], ["Tailwind CSS", "Mahir"]] },
   { group: "Backend", items: [["Node.js", "Menengah"], ["Supabase", "Mahir"], ["REST API", "Mahir"]] },

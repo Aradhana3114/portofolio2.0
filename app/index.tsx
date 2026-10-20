@@ -1,5 +1,4 @@
-import { Animated, Platform, ScrollView } from "react-native";
-import { useRef } from "react";
+import { Animated, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   SectionScrollProvider,
@@ -7,7 +6,6 @@ import {
 } from "@/components/SectionScroll";
 import { useMotion } from "@/components/motion/Motion";
 import Header from "@/components/Header";
-import ScrollExpand from "@/components/ScrollExpand";
 import Hero from "@/components/Hero";
 import Words from "@/components/Words";
 import About from "@/components/About";
@@ -23,27 +21,9 @@ export default function Home() {
   const { scrollRef, register, scrollTo } = useSectionScrollController();
   const { scrollY } = useMotion();
 
-  // `scrollY` di MotionProvider memakai native driver, sedangkan ScrollExpand
-  // menganimasikan width/height/borderRadius yang TIDAK aman untuk native
-  // driver — dan nilai native-driven tidak bisa dibaca di JS thread. Jadi
-  // ScrollExpand memakai nilai kedua yang di-update lewat `listener` (tetap
-  // jalan di JS thread) tanpa menyentuh event native yang sudah ada.
-  const splashY = useRef(new Animated.Value(0)).current;
-
-  // Di web, ScrollExpand memakai `ScrollExpandDom` yang membaca posisi scroll
-  // sendiri langsung dari DOM; `splashY` tidak dikonsumsi siapa pun di sana.
-  // Menyimpan nilai tiap event scroll tetap memicu pekerjaan JS percuma,
-  // jadi listener hanya dipasang di native.
-  const isWeb = Platform.OS === "web";
-
   const onScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    {
-      useNativeDriver: true,
-      listener: isWeb
-        ? undefined
-        : (e: any) => splashY.setValue(e.nativeEvent.contentOffset.y),
-    },
+    { useNativeDriver: true },
   );
 
   return (
@@ -56,7 +36,6 @@ export default function Home() {
           scrollEventThrottle={16}
           onScroll={onScroll}
         >
-          <ScrollExpand scrollY={splashY} />
           <Hero />
           <Words />
           <About />
