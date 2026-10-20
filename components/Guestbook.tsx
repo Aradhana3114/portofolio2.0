@@ -195,7 +195,7 @@ export default function Guestbook() {
                     <PillButton
                       onPress={send}
                       fill={empty || sending ? "cream" : "ink"}
-                      textColor="ink"
+                      textColor={empty || sending ? "ink" : "paper"}
                       size="md"
                     >
                       {sending ? "Menyimpan..." : "Tanda tangan"}

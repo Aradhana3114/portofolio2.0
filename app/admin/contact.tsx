@@ -38,14 +38,19 @@ const TITLE_LOGIN = "Pesan masuk";
 const LEAD = "Baca pesan dari form Kontak, balas lewat email, atau hapus. Tidak ada yang bisa melihat halaman ini selain admin.";
 
 /**
- * Susun URI mailto untuk membalas.
+ * Susun URI untuk membalas.
  *
  * Tombol balas tidak mengirim email sendiri — tidak ada backend mail di
  * proyek ini dan kredensial SMTP tidak boleh ada di bundle klien. Yang
- * dilakukan tombol ini hanyalah membuka aplikasi email dengan alamat,
+ * dilakukan tombol ini hanyalah membuka jendela compose dengan alamat,
  * subjek, dan kutipan pesan sudah terisi, lalu pengirim menekan kirim.
+ *
+ * Di web memakai URL compose Gmail langsung. Chrome meneruskan `mailto:`
+ * ke Gmail hanya dengan penerima (`to`) — `subject` dan `body` ikut
+ * terbuang, jadi compose terbuka kosong. Di native tetap `mailto:` karena
+ * yang membuka adalah aplikasi email bawaan perangkat.
  */
-function mailtoHref(r: ContactEntry) {
+function replyHref(r: ContactEntry) {
   const quoted = r.text
     .split("\n")
     .map((line) => `> ${line}`)
@@ -56,7 +61,21 @@ function mailtoHref(r: ContactEntry) {
   const subject = encodeURIComponent(
     r.subject ? `Re: ${r.subject}` : "Balasan dari portofolio",
   );
+
+  if (Platform.OS === "web") {
+    return `https://mail.google.com/mail/u/0/?view=cm&fs=1&tf=1&to=${encodeURIComponent(r.email)}&su=${subject}&body=${body}`;
+  }
   return `mailto:${r.email}?subject=${subject}&body=${body}`;
+}
+
+/** Buka compose di tab baru (web) supaya halaman admin tidak tertimpa. */
+function openReply(r: ContactEntry) {
+  const url = replyHref(r);
+  if (Platform.OS === "web") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  void Linking.openURL(url);
 }
 
 export default function AdminContact() {
@@ -262,7 +281,7 @@ export default function AdminContact() {
             index={n}
             total={rows.length}
             deleting={deletingId === r.id}
-            onReply={() => void Linking.openURL(mailtoHref(r))}
+            onReply={() => openReply(r)}
             onDelete={() => void remove(r.id)}
           />
         ))}
