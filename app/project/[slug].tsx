@@ -34,6 +34,10 @@ function initials(title: string) {
     .join("");
 }
 
+export function generateStaticParams() {
+  return works.map((w) => ({ slug: w.slug }));
+}
+
 export default function CaseStudy() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();

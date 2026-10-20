@@ -15,6 +15,33 @@ Berjalan di Android, iOS, dan web dari satu basis kode.
 Build web statis untuk deploy:
 
     npx expo export --platform web     # hasil di dist/
+    npm run build                      # alias yang sama
+
+## Deploy ke Vercel
+
+Sudah dikonfigurasi lewat `vercel.json` (static export, bukan SPA).
+
+1. Push repo ke GitHub.
+2. Di [vercel.com/new](https://vercel.com/new) — Import repo. Framework
+   terdeteksi "Other"; Build/Output sudah dibaca dari `vercel.json`.
+3. Tambah Environment Variables di **Project → Settings → Environment
+   Variables** (nilai yang sama dengan `.env`):
+
+       EXPO_PUBLIC_FIREBASE_API_KEY
+       EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
+       EXPO_PUBLIC_FIREBASE_PROJECT_ID
+       EXPO_PUBLIC_FIREBASE_APP_ID
+       EXPO_PUBLIC_ADMIN_PASSCODE     # opsional
+
+   Variabel `EXPO_PUBLIC_*` di-inline saat build — set sebelum deploy,
+   rebuild kalau nilainya berubah.
+4. Deploy. Setiap push ke branch utama otomatis rebuild.
+
+Deploy manual via CLI juga bisa:
+
+    npm i -g vercel
+    vercel          # preview
+    vercel --prod   # production
 
 ## Design system
 
