@@ -1,5 +1,6 @@
 import {
   Animated,
+  Platform,
   Pressable,
   View,
   type PressableProps,
@@ -57,6 +58,13 @@ type PressProps = {
   style?: StyleProp<ViewStyle>;
   hoverScale?: number;
   pressScale?: number;
+  /**
+   * Web: elemen luar di-render sebagai `<a href>` asli dengan target ini —
+   * buka tab baru tanpa bisa diblokir popup blocker (window.open bisa).
+   * Native mengabaikan prop ini dan tetap memakai `onPress`.
+   */
+  href?: string;
+  hrefAttrs?: { target?: string; rel?: string };
 } & Omit<PressableProps, "style" | "children">;
 
 export function Press({
@@ -66,6 +74,8 @@ export function Press({
   hoverScale = 0.975,
   pressScale = 0.94,
   style: pressableStyle,
+  href,
+  hrefAttrs,
   onPressIn,
   onPressOut,
   ...rest
@@ -82,13 +92,28 @@ export function Press({
     [hovered, pressed, hoverScale, pressScale],
   );
 
+  // Di web anchor-lah yang menangani navigasi; onPress tidak ikut dilewat
+  // supaya klik tidak membuka dua tab (anchor + window.open).
+  const isWeb = Platform.OS === "web";
+  const anchorProps = isWeb && href != null ? { href, hrefAttrs } : null;
+  const onPress = anchorProps ? undefined : rest.onPress;
+
   return (
-    <View className={className} style={style}>
+    <View
+      className={className}
+      style={style}
+      accessibilityRole={anchorProps ? "link" : undefined}
+      // @ts-expect-error RNW View menerima href/hrefAttrs dan me-render <a>;
+      // tipe React Native inti tidak membawa prop tersebut.
+      href={anchorProps ? href : undefined}
+      hrefAttrs={anchorProps ? hrefAttrs : undefined}
+    >
       <Animated.View
         style={{ flexDirection: "row", transform: [{ scale }] }}
       >
         <Pressable
           {...rest}
+          onPress={onPress}
           {...handlers}
           style={[{ flexShrink: 1 }, pressableStyle]}
           onPressIn={(e) => {

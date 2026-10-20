@@ -1,6 +1,6 @@
 import { Linking, Text, View } from "react-native";
 import { nav, profile, socials } from "@/data/content";
-import { composeEmail } from "@/lib/composeEmail";
+import { composeEmail, composeEmailUrl } from "@/lib/composeEmail";
 import { Reveal } from "./motion/Reveal";
 import { Press } from "./motion/Press";
 import { useWide } from "./motion/Motion";
@@ -64,7 +64,12 @@ export default function Footer() {
               >
                 {profile.name} — {profile.major}, {profile.school}.
               </Text>
-              <Press onPress={() => composeEmail(profile.email)} className="mt-4 self-start">
+              <Press
+                href={composeEmailUrl(profile.email)}
+                hrefAttrs={{ target: "_blank", rel: "noopener" }}
+                onPress={() => composeEmail(profile.email)}
+                className="mt-4 self-start"
+              >
                 <View className="rounded-pill bg-paper px-4 py-2">
                   <Text className="font-sans text-sm text-ink">{profile.email}</Text>
                 </View>
